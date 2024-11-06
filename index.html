@@ -101,6 +101,10 @@
             min-height: 65px;
         }
 
+        .btn img {
+            vertical-align: middle;
+        }
+
         .btn.invisible {
             opacity: 0;
             pointer-events: none;
@@ -187,26 +191,31 @@
                 <div class="controls-row">
                     <template x-if="!isRunning">
                         <button @click="start" class="btn">
-                            ▶
+                            <img src="./play.svg" alt="play" width="24" height="24">
                         </button>
                     </template>
                     <template x-if="isRunning">
                         <button @click="pause" class="btn">
-                            ⏸
+                            <img src="./pause.svg" alt="pause" width="24" height="24">
                         </button>
                     </template>
                 </div>
                 <div class="controls-row">
                     <button @click="restart" class="btn" :class="{ 'invisible': isRunning }">
-                        ↺
+                        <img src="./restart.svg" alt="restart" width="24" height="24">
                     </button>
                     <button @click="switchMode" class="btn" :class="{ 'invisible': isRunning }">
-                        ⇥
+                        <img src="./forward.svg" alt="forward" width="24" height="24">
                     </button>
                 </div>
                 <div class="controls-row">
                     <button @click="toggleFullscreen" class="btn" :class="{ 'invisible': isRunning }">
-                        <span x-text="isFullscreen ? '↙' : '↗'"></span>
+                        <template x-if="isFullscreen">
+                            <img src="./fullscreen-enter.svg" alt="fullscreen-enter" width="24" height="24">
+                        </template>
+                        <template x-if="!isFullscreen">
+                            <img src="./fullscreen-exit.svg" alt="fullscreen-exit" width="24" height="24">
+                        </template>
                     </button>
                 </div>
             </div>

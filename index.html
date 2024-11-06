@@ -101,6 +101,20 @@
             background: #444;
         }
 
+        .status-box {
+            margin-top: 20px;
+            background: #333;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            min-width: 80px;
+            min-height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         /* Break mode styles */
         .break-mode {
             /* background-color: #ffffff; */
@@ -124,6 +138,11 @@
             background: #ccc;
         }
 
+        .break-mode .status-box {
+            background: #ddd;
+            color: #1a1a1a;
+        }
+
         /* Dimmed state */
         .dimmed {
             opacity: 0;
@@ -141,43 +160,48 @@
     </style>
 </head>
 <body x-data="timer" @click="wakePage">
-<div class="timer-container" :class="{ 'dimmed': isDimmed }">
-    <div class="time-display">
-        <div class="digit-group">
-            <div class="digit" x-text="String(minutes).padStart(2, '0')[0]"></div>
-            <div class="digit" x-text="String(minutes).padStart(2, '0')[1]"></div>
+<div class="main-container">
+    <div class="timer-container" :class="{ 'dimmed': isDimmed }">
+        <div class="time-display">
+            <div class="digit-group">
+                <div class="digit" x-text="String(minutes).padStart(2, '0')[0]"></div>
+                <div class="digit" x-text="String(minutes).padStart(2, '0')[1]"></div>
+            </div>
+            <div class="digit-group">
+                <div class="digit" x-text="String(seconds).padStart(2, '0')[0]"></div>
+                <div class="digit" x-text="String(seconds).padStart(2, '0')[1]"></div>
+            </div>
         </div>
-        <div class="digit-group">
-            <div class="digit" x-text="String(seconds).padStart(2, '0')[0]"></div>
-            <div class="digit" x-text="String(seconds).padStart(2, '0')[1]"></div>
+        <div class="controls">
+            <div class="controls-row">
+                <template x-if="!isRunning">
+                    <button @click="start" class="btn">
+                        ▶
+                    </button>
+                </template>
+                <template x-if="isRunning">
+                    <button @click="pause" class="btn">
+                        ⏸
+                    </button>
+                </template>
+            </div>
+            <div class="controls-row">
+                <button @click="restart" class="btn" :class="{ 'invisible': isRunning }">
+                    ↺
+                </button>
+                <button @click="switchMode" class="btn" :class="{ 'invisible': isRunning }">
+                    ⇥
+                </button>
+            </div>
+            <div class="controls-row">
+                <button @click="toggleFullscreen" class="btn" :class="{ 'invisible': isRunning }">
+                    <span x-text="isFullscreen ? '↙' : '↗'"></span>
+                </button>
+            </div>
         </div>
     </div>
-    <div class="controls">
-        <div class="controls-row">
-            <template x-if="!isRunning">
-                <button @click="start" class="btn">
-                    ▶
-                </button>
-            </template>
-            <template x-if="isRunning">
-                <button @click="pause" class="btn">
-                    ⏸
-                </button>
-            </template>
-        </div>
-        <div class="controls-row">
-            <button @click="restart" class="btn" :class="{ 'invisible': isRunning }">
-                ↺
-            </button>
-            <button @click="switchMode" class="btn" :class="{ 'invisible': isRunning }">
-                ⇥
-            </button>
-        </div>
-        <div class="controls-row">
-            <button @click="toggleFullscreen" class="btn" :class="{ 'invisible': isRunning }">
-                <span x-text="isFullscreen ? '↙' : '↗'"></span>
-            </button>
-        </div>
+    <div class="status-box">
+        <span x-text="isBreak ? 'Break Time' : 'Focus Time'"></span>
     </div>
 </div>
 

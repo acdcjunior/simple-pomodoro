@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pomodoro Timer</title>
+    <title>Timer</title>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             margin: 0;
@@ -50,8 +51,8 @@
         }
 
         .digit {
-            background: #1a1a1a;
-            color: #ffffff;
+            background: #f0f0f0;
+            color: #1a1a1a;
             font-size: 8rem;
             font-weight: bold;
             padding: 20px;
@@ -70,7 +71,12 @@
             right: 0;
             top: 50%;
             height: 2px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .digit.overtime {
+            background: #ffeded;
+            color: #cc0000;
         }
 
         .controls {
@@ -99,10 +105,15 @@
             transition: all 0.3s ease;
             min-width: 80px;
             min-height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .btn img {
-            vertical-align: middle;
+            width: 24px;
+            height: 24px;
         }
 
         .btn.invisible {
@@ -116,7 +127,7 @@
         }
 
         .status-box {
-            opacity: 0.3;
+            opacity: 0.5;
             margin-top: 20px;
             background: #333;
             color: white;
@@ -130,35 +141,6 @@
             justify-content: center;
         }
 
-        /* Break mode styles */
-        .break-mode {
-            /* background-color: #ffffff; */
-        }
-
-        .break-mode .digit {
-            background: #f0f0f0;
-            color: #1a1a1a;
-        }
-
-        .break-mode .digit::after {
-            background: rgba(0, 0, 0, 0.1);
-        }
-
-        .break-mode .btn {
-            background: #ddd;
-            color: #1a1a1a;
-        }
-
-        .break-mode .btn:hover {
-            background: #ccc;
-        }
-
-        .break-mode .status-box {
-            background: #ddd;
-            color: #1a1a1a;
-        }
-
-        /* Dimmed state */
         .dimmed {
             opacity: 0;
         }
@@ -172,162 +154,267 @@
                 padding: 0 20px;
             }
         }
+
+        .home-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .option-btn {
+            background: #333;
+            border: none;
+            color: white;
+            padding: 20px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .option-btn:hover {
+            background: #444;
+        }
+
+        .option-btn span:last-child {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body x-data="timer" @click="wakePage">
-    <div class="main-container">
+<div class="main-container">
+    <template x-if="currentView === 'home'">
+        <div class="home-options">
+            <button @click="startTimer('Pomodoro', 25 * 60)" class="option-btn">
+                <span>Pomodoro</span>
+                <span>25 minutes</span>
+            </button>
+            <button @click="startTimer('Break', 5 * 60)" class="option-btn">
+                <span>Break</span>
+                <span>5 minutes</span>
+            </button>
+            <button @click="startTimer('Meditate', 15 * 60)" class="option-btn">
+                <span>Meditate</span>
+                <span>15 minutes</span>
+            </button>
+            <button @click="startTimer('Other', 30 * 60)" class="option-btn">
+                <span>Other</span>
+                <span>30 minutes</span>
+            </button>
+        </div>
+    </template>
+
+    <template x-if="currentView === 'timer'">
         <div class="timer-container" :class="{ 'dimmed': isDimmed }">
             <div class="time-display">
                 <div class="digit-group">
-                    <div class="digit" x-text="String(minutes).padStart(2, '0')[0]"></div>
-                    <div class="digit" x-text="String(minutes).padStart(2, '0')[1]"></div>
+                    <div class="digit" :class="{ 'overtime': isOvertime }" x-text="String(minutes).padStart(2, '0')[0]"></div>
+                    <div class="digit" :class="{ 'overtime': isOvertime }" x-text="String(minutes).padStart(2, '0')[1]"></div>
                 </div>
                 <div class="digit-group">
-                    <div class="digit" x-text="String(seconds).padStart(2, '0')[0]"></div>
-                    <div class="digit" x-text="String(seconds).padStart(2, '0')[1]"></div>
+                    <div class="digit" :class="{ 'overtime': isOvertime }" x-text="String(seconds).padStart(2, '0')[0]"></div>
+                    <div class="digit" :class="{ 'overtime': isOvertime }" x-text="String(seconds).padStart(2, '0')[1]"></div>
                 </div>
             </div>
             <div class="controls">
                 <div class="controls-row">
                     <template x-if="!isRunning">
                         <button @click="start" class="btn">
-                            <img src="./play.svg" alt="play" width="24" height="24">
+                            <img src="./play.svg" alt="Play">
                         </button>
                     </template>
                     <template x-if="isRunning">
                         <button @click="pause" class="btn">
-                            <img src="./pause.svg" alt="pause" width="24" height="24">
+                            <img src="./pause.svg" alt="Pause">
+                        </button>
+                    </template>
+                    <template x-if="isOvertime || !isRunning">
+                        <button @click="goHome" class="btn">
+                            <img src="./forward.svg" alt="Home">
                         </button>
                     </template>
                 </div>
+                <template x-if="!isRunning && !isOvertime">
+                    <div class="controls-row">
+                        <button @click="restart" class="btn">
+                            <img src="./restart.svg" alt="Restart">
+                        </button>
+                    </div>
+                </template>
                 <div class="controls-row">
-                    <button @click="restart" class="btn" :class="{ 'invisible': isRunning }">
-                        <img src="./restart.svg" alt="restart" width="24" height="24">
-                    </button>
-                    <button @click="switchMode" class="btn" :class="{ 'invisible': isRunning }">
-                        <img src="./forward.svg" alt="forward" width="24" height="24">
-                    </button>
-                </div>
-                <div class="controls-row">
-                    <button @click="toggleFullscreen" class="btn" :class="{ 'invisible': isRunning }">
-                        <template x-if="isFullscreen">
-                            <img src="./fullscreen-enter.svg" alt="fullscreen-enter" width="24" height="24">
-                        </template>
-                        <template x-if="!isFullscreen">
-                            <img src="./fullscreen-exit.svg" alt="fullscreen-exit" width="24" height="24">
-                        </template>
+                    <button @click="toggleFullscreen" class="btn" :class="{ 'invisible': isRunning && !isOvertime }">
+                        <img :src="isFullscreen ? './fullscreen-exit.svg' : './fullscreen-enter.svg'" :alt="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'">
                     </button>
                 </div>
             </div>
         </div>
+    </template>
+
+    <template x-if="currentView === 'timer'">
         <div class="status-box">
-            <span x-text="isBreak ? 'Break Time' : 'Focus Time'"></span>
+            <span x-text="timerType"></span>
         </div>
-    </div>
+    </template>
+</div>
 
 <script>
-    const WORK_TIME = 25 * 60;  // 25 minutes in seconds
-    const BREAK_TIME = 5 * 60;  // 5 minutes in seconds
+  const supabaseClientFrom = (() => {
+    const authBase64 = new URLSearchParams(window.location.search).get('auth');
+    if (authBase64) localStorage.setItem('auth', atob(authBase64));
+    const item = localStorage.getItem('auth');
+    if (!item) {
+      console.warn('Authentication not found. Please provide the authentication details.');
+      return { async insert() { /* Do nothing */ } };
+    }
+    const auth = JSON.parse(item);
+    const supabaseClient = supabase.createClient(
+      auth.supabaseUrl,
+      auth.supabaseKey
+    );
+    return supabaseClient.from(auth.tableName);
+  })();
 
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('timer', () => ({
-            minutes: Math.floor(WORK_TIME / 60),
-            seconds: 0,
-            isRunning: false,
-            timerInterval: null,
-            isBreak: false,
-            isDimmed: false,
-            dimTimeout: null,
-            isFullscreen: false,
-            audio25: new Audio('./timer25-complete.wav'),
-            audio5: new Audio('./timer5-complete.wav'),
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('timer', () => ({
+      currentView: 'home',
+      minutes: 25,
+      seconds: 0,
+      isRunning: false,
+      timerInterval: null,
+      isDimmed: false,
+      dimTimeout: null,
+      isFullscreen: false,
+      isOvertime: false,
+      timerType: null,
+      initialTime: 0,
+      audioComplete: new Audio('./timer25-complete.wav'),
 
-            init() {
-                this.$watch('isBreak', value => {
-                    document.body.classList.toggle('break-mode', value);
-                });
+      async logAction(action) {
+        try {
+          const { error } = await supabaseClientFrom
+            .insert({
+              timer_type: this.timerType,
+              action: action,
+              timestamp: new Date().toISOString()
+            });
 
-                // Listen for fullscreen changes
-                document.addEventListener('fullscreenchange', () => {
-                    this.isFullscreen = !!document.fullscreenElement;
-                });
-            },
+          if (error) throw error;
+        } catch (error) {
+          console.error('Error logging action:', error);
+        }
+      },
 
-            start() {
-                this.isRunning = true;
-                this.scheduleDim();
-                this.timerInterval = setInterval(() => {
-                    if (this.seconds === 0) {
-                        if (this.minutes === 0) {
-                            this.completeTimer();
-                            return;
-                        }
-                        this.minutes--;
-                        this.seconds = 59;
-                    } else {
-                        this.seconds--;
-                    }
-                }, 1000);
-            },
+      init() {
+        document.addEventListener('fullscreenchange', () => {
+          this.isFullscreen = !!document.fullscreenElement;
+        });
+      },
 
-            pause() {
-                this.isRunning = false;
-                clearInterval(this.timerInterval);
-                this.isDimmed = false;
-                clearTimeout(this.dimTimeout);
-            },
+      async startTimer(type, duration) {
+        this.timerType = type;
+        this.initialTime = duration;
+        this.minutes = Math.floor(duration / 60);
+        this.seconds = 0;
+        this.isOvertime = false;
+        this.currentView = 'timer';
+        await this.logAction('start');
+        await this.start(false);
+      },
 
-            restart() {
-                this.pause();
-                const totalSeconds = this.isBreak ? BREAK_TIME : WORK_TIME;
-                this.minutes = Math.floor(totalSeconds / 60);
-                this.seconds = 0;
-            },
+      async start(logResumeAction = true) {
+        this.isRunning = true;
+        this.scheduleDim();
+        if (logResumeAction) await this.logAction('resume');
 
-            switchMode() {
-                this.isBreak = !this.isBreak;
-                const totalSeconds = this.isBreak ? BREAK_TIME : WORK_TIME;
-                this.minutes = Math.floor(totalSeconds / 60);
-                this.seconds = 0;
-            },
-
-            completeTimer() {
-                this.pause();
-                const audio = !this.isBreak ? this.audio25 : this.audio5;
-                audio.play().catch(e => console.log('Audio play failed:', e));
-                this.switchMode();
-            },
-
-            scheduleDim() {
-                clearTimeout(this.dimTimeout);
-                this.isDimmed = false;
-                this.dimTimeout = setTimeout(() => {
-                    this.isDimmed = true;
-                }, 3000);
-            },
-
-            wakePage() {
-                if (this.isDimmed) {
-                    this.isDimmed = false;
-                    if (this.isRunning) {
-                        this.scheduleDim();
-                    }
-                }
-            },
-
-            toggleFullscreen() {
-                if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen().catch(e => {
-                        console.log('Error attempting to enable fullscreen:', e);
-                    });
-                } else {
-                    if (document.exitFullscreen) {
-                        document.exitFullscreen();
-                    }
-                }
+        this.timerInterval = setInterval(() => {
+          if (this.isOvertime) {
+            // Count up
+            if (this.seconds === 59) {
+              this.minutes++;
+              this.seconds = 0;
+            } else {
+              this.seconds++;
             }
-        }));
-    });
+          } else {
+            // Count down
+            if (this.seconds === 0) {
+              if (this.minutes === 0) {
+                this.isOvertime = true;
+                this.minutes = Math.floor(this.initialTime / 60);
+                this.seconds = 0;
+                this.audioComplete.play().catch(e => console.log('Audio play failed:', e));
+                this.wakePage();
+                return;
+              }
+              this.minutes--;
+              this.seconds = 59;
+            } else {
+              this.seconds--;
+            }
+          }
+        }, 1000);
+      },
+
+      async pause() {
+        this.isRunning = false;
+        clearInterval(this.timerInterval);
+        this.isDimmed = false;
+        clearTimeout(this.dimTimeout);
+        await this.logAction('pause');
+      },
+
+      async restart() {
+        await this.pause();
+        this.minutes = Math.floor(this.initialTime / 60);
+        this.seconds = 0;
+        this.isOvertime = false;
+        await this.logAction('restart');
+      },
+
+      async goHome() {
+        await this.pause();
+        await this.logAction('end');
+        this.currentView = 'home';
+      },
+
+      scheduleDim() {
+        clearTimeout(this.dimTimeout);
+        this.isDimmed = false;
+        this.dimTimeout = setTimeout(() => {
+          this.isDimmed = true;
+        }, 5000);
+      },
+
+      wakePage() {
+        if (this.isDimmed) {
+          this.isDimmed = false;
+          if (this.isRunning) {
+            this.scheduleDim();
+          }
+        }
+      },
+
+      toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(e => {
+            console.log('Error attempting to enable fullscreen:', e);
+          });
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          }
+        }
+      }
+    }));
+  });
 </script>
 </body>
 </html>

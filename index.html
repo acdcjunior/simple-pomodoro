@@ -193,22 +193,16 @@
 <div class="main-container">
     <template x-if="currentView === 'home'">
         <div class="home-options">
-            <button @click="startTimer('Pomodoro', 25 * 60)" class="option-btn">
-                <span>Pomodoro</span>
-                <span>25 minutes</span>
-            </button>
-            <button @click="startTimer('Break', 5 * 60)" class="option-btn">
-                <span>Break</span>
-                <span>5 minutes</span>
-            </button>
-            <button @click="startTimer('Meditate', 15 * 60)" class="option-btn">
-                <span>Meditate</span>
-                <span>15 minutes</span>
-            </button>
-            <button @click="startTimer('Other', 30 * 60)" class="option-btn">
-                <span>Other</span>
-                <span>30 minutes</span>
-            </button>
+            <template x-for="timerType in timerTypes">
+                <button
+                        @click="startTimer(timerType.label, timerType.duration)"
+                        class="option-btn"
+                        :style="{ backgroundColor: timerType.bgColor }"
+                >
+                    <span x-text="timerType.label"></span>
+                    <span x-text="timerType.duration / 60 + ' minutes'"></span>
+                </button>
+            </template>
         </div>
     </template>
 
@@ -260,7 +254,7 @@
 
     <template x-if="currentView === 'timer'">
         <div class="status-box">
-            <span x-text="timerType"></span>
+            <span x-text="selectedTimerTypeLabel"></span>
         </div>
     </template>
 </div>
@@ -284,6 +278,14 @@
 
   document.addEventListener('alpine:init', () => {
     Alpine.data('timer', () => ({
+      timerTypes: [
+        { label: 'Pomodoro 1TC', duration: 25 * 60, bgColor: '#003081' },
+        { label: 'Pomodoro 2ST', duration: 25 * 60, bgColor: 'rgba(1,218,114,0.5)' },
+        { label: 'Break', duration: 5 * 60, bgColor: '#333' },
+        { label: 'Meditate', duration: 15 * 60, bgColor: '#6b9ae0' },
+        { label: 'Lunch', duration: 45 * 60, bgColor: '#bd5410' },
+        { label: 'Other', duration: 30 * 60, bgColor: '#333' },
+      ],
       currentView: 'home',
       minutes: 25,
       seconds: 0,
@@ -293,7 +295,7 @@
       dimTimeout: null,
       isFullscreen: false,
       isOvertime: false,
-      timerType: null,
+      selectedTimerTypeLabel: null,
       initialTime: 0,
       audioComplete: new Audio('./timer25-complete.wav'),
 
@@ -301,7 +303,7 @@
         try {
           const { error } = await supabaseClientFrom
             .insert({
-              timer_type: this.timerType,
+              timer_type: this.selectedTimerTypeLabel,
               action: action,
               timestamp: new Date().toISOString()
             });
@@ -319,7 +321,7 @@
       },
 
       async startTimer(type, duration) {
-        this.timerType = type;
+        this.selectedTimerTypeLabel = type;
         this.initialTime = duration;
         this.minutes = Math.floor(duration / 60);
         this.seconds = 0;
@@ -364,6 +366,7 @@
       },
 
       async pause() {
+        if (!this.isRunning) return;
         this.isRunning = false;
         clearInterval(this.timerInterval);
         this.isDimmed = false;
